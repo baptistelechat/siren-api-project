@@ -1,8 +1,8 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { readExcel } from "./utils/readExcel";
 import { fetchSirenData } from "./utils/fetchSirenData";
+import { readExcel } from "./utils/readExcel";
 
 const resultDir = path.join(__dirname, "../out");
 const validDataFilePath = path.join(resultDir, "valid.json");
@@ -46,19 +46,42 @@ const processAllSirens = async () => {
     const siren = sirens[i];
     try {
       const data = await fetchSirenData(siren);
-      if (data) {
-        if (!isFirstValid) validDataStream.write(",\n");
-        validDataStream.write(JSON.stringify({ siren, ...data }, null, 2));
-        isFirstValid = false;
-      }
+      if (!isFirstValid) validDataStream.write(",\n");
+      validDataStream.write(
+        JSON.stringify({ siren, ...data, erreur: "" }, null, 2)
+      );
+      isFirstValid = false;
     } catch (error: any) {
+      console.log("─".repeat(30));
       console.error(
         `❌ Erreur lors de la récupération des données pour le SIREN : ${siren}`
       );
+
+      // Ajout dans valid.json avec champs vides + erreur
+      if (!isFirstValid) validDataStream.write(",\n");
+      validDataStream.write(
+        JSON.stringify(
+          {
+            siren,
+            name: "",
+            codeNaf: "",
+            libelleNaf: "",
+            erreur: error.message || "Erreur inconnue",
+          },
+          null,
+          2
+        )
+      );
+      isFirstValid = false;
+
+      // Ajout dans invalid.json pour journalisation
       if (!isFirstInvalid) invalidDataStream.write(",\n");
       invalidDataStream.write(
         JSON.stringify(
-          { siren, error: error.message || "Erreur inconnue" },
+          {
+            siren,
+            error: error.message || "Erreur inconnue",
+          },
           null,
           2
         )

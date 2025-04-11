@@ -15,7 +15,12 @@ export const fetchSirenData = async (siren: string) => {
   });
 
   if (!response.ok) {
-    throw new Error(`Erreur API Sirene : ${response.status}`);
+    const errorJson = await response.json().catch(() => null);
+
+    const message =
+      errorJson?.header?.message || response.statusText || "Erreur inconnue";
+
+    throw new Error(`${response.status} - ${message}`);
   }
 
   const data = (await response.json()) as ApiResponse;
